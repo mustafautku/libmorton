@@ -28,9 +28,10 @@ using namespace SpatialIndex;
 #define TESTING 0
 
 static int DIMSCALE=16;  // #bits to represent single dim.
-std::map<uint32_t, uint32_t> resultset;
-uint32_t currmin;
-uint32_t currmax;
+//std::map<uint32_t, uint32_t> resultset;
+std::vector<uint32_t> resultset;
+//uint32_t currmin;
+//uint32_t currmax;
 
 void findMortonRanges(Region *, Region *, uint32_t, int );
 
@@ -82,6 +83,32 @@ int main(int argc, char *argv[]) {
 		uint32_t v4 = v1 | v2;  // 10000 | 1100 = 28
 		cout << "v3: " << v3 << endl;
 		cout << "v4: " << v4 << endl;
+
+		set<int> myset;   // sorts data by default. :(  Does not insert duplicate :)
+		myset.insert(10);
+		myset.insert(8);
+		myset.insert(17);
+		myset.insert(11);
+		myset.insert(11);
+		set<int>::iterator itr;
+		cout << "\nThe set s1 is : \n";  // 8,10,11,17,
+		for (itr = myset.begin();
+				itr != myset.end(); ++itr)
+		{
+			cout << *itr << ",";
+		}
+		cout << endl;
+
+		vector<int> g1;
+		g1.push_back(10);
+		g1.push_back(8);
+		g1.push_back(17);
+		g1.push_back(11);
+		g1.push_back(11);
+		cout << "Output of vector: ";   // 10, 8, 17, 11, 11,
+		for (auto i = g1.begin(); i != g1.end(); ++i)
+			cout << *i << ", ";
+		cout << endl;
 	}
 
 	// FINDING "morton-ranges" of a range query
@@ -116,8 +143,9 @@ int main(int argc, char *argv[]) {
 		xh=xl+dx;
 		yh=yl+dy;
 	}while(xh>1.0 || yh>1.0);
-	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
+	cout<< std::setprecision(25)<< xl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<<yl << " "<<std::setprecision(25)<<yh << " "<<endl;
 
+	// Range QUERY corners are aligned to the nearest multiple of (1/pow(2,16)). This approx. increases the exec. time without loosing correctness.
 	int yuvarlama=(int)(xl/(1/pow(2,16)));
 	xl=(1/pow(2,16))*yuvarlama;
 
@@ -129,7 +157,7 @@ int main(int argc, char *argv[]) {
 
 	yuvarlama=(int)(yh/(1/pow(2,16)));
 	yh=(1/pow(2,16))*yuvarlama;
-	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
+	cout<< std::setprecision(25)<<xl << " "<<std::setprecision(25)<<xh << " "<<std::setprecision(25)<<yl << " "<<std::setprecision(25)<<yh << " "<<endl;
 
 	double *plow= new double[2]{xl,yl};
 	double *phigh= new double[2]{xh,yh};
@@ -150,22 +178,23 @@ int main(int argc, char *argv[]) {
 	delete phigh;
 	int pos=1;
 	uint32_t mc=0;
-	currmin=0;
-	currmax=0;
+//	currmin=0;
+//	currmax=0;
 	findMortonRanges(query,unit,mc,pos);
-	if(resultset.find(currmin) != resultset.end()){
-		resultset.erase(currmin);
-		resultset.insert(
-				std::pair<uint32_t, uint32_t>(currmin, currmax));
-	}else
-	resultset.insert(
-					std::pair<uint32_t, uint32_t>(currmin, currmax));
-	map<uint32_t, uint32_t>::iterator itr;
-	for (itr = resultset.begin(); itr != resultset.end(); ++itr) {
-		cout << '\t' << itr->first
-				<< '\t' << itr->second << '\n';
-	}
+
+	cout << "Output of vector: "<<endl;   // 10, 8, 17, 11, 11,
+	for (auto i = resultset.begin(); i != resultset.end(); ++i)
+		cout << *i << endl;
 	cout << endl;
+
+	// Convert to discrete partitions:
+//	std::map<uint32_t,uint32_t> resultmap;
+//	uint32_t* currmin=resultset.begin();
+//	uint32_t* currmax=resultset.begin();
+//	for (auto i = resultset.begin(); i != resultset.end(); ++i){
+//		if(*i > currmax+1)
+//
+//	}
 
 	delete query;
 	delete unit;
@@ -193,68 +222,28 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << (*subunit) << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad0 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
-//			if (mortonmin==0 && currmin == 0){
-//				currmax = mortonmax;
-//				resultset.insert(
-//						std::pair<uint32_t, uint32_t>(currmin, currmax));
-//			}
-			if (resultset.empty()){//if (currmin==0){
-				currmin=mortonmin;
-				currmax = mortonmax;
-				resultset.insert(
-						std::pair<uint32_t, uint32_t>(currmin, currmax));
-			}
-			else if (mortonmin == currmax + 1) {
-				currmax = mortonmax;
-			} else {
 
-				if(resultset.find(currmin) != resultset.end()){
-					resultset.erase(currmin);
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				}else
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				currmin = mortonmin;
-				currmax = mortonmax;
-			}
+			resultset.push_back(mortonmin);
+			resultset.push_back(0);  // a signal to indicate all values..
+			resultset.push_back(mortonmax);
+
 			//cout << mortonmin << " " << mortonmax<< ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad0, pos + 1);
 			else {
-				int shift = (32 - 2 * pos);
-				uint32_t mortonmin = (quad0 << shift);
-				uint32_t mask = pow(2, shift) - 1;
-				uint32_t mortonmax = (mortonmin | mask);
-//				if (mortonmin==0 && currmin == 0){
-//					currmax = mortonmax;
-//					resultset.insert(
-//											std::pair<uint32_t, uint32_t>(currmin, currmax));
-//				}
-				if (resultset.empty()){//if (currmin==0){
-					currmin=mortonmin;
-					currmax = mortonmax;
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
+				if(DEBUG){
+					int shift = (2*DIMSCALE - 2 * pos);
+					uint32_t mortonmin = (quad0 << shift);
+					uint32_t mask = pow(2, shift) - 1;
+					uint32_t mortonmax = (mortonmin | mask);
+					assert(mortonmin==mortonmax);
 				}
-				else if (mortonmin == currmax + 1) {
-					currmax = mortonmax;
-				} else {
-					if(resultset.find(currmin) != resultset.end()){
-						resultset.erase(currmin);
-						resultset.insert(
-								std::pair<uint32_t, uint32_t>(currmin, currmax));
-					}else
-						resultset.insert(
-								std::pair<uint32_t, uint32_t>(currmin, currmax));
-					currmin = mortonmin;
-					currmax = mortonmax;
-				}
+				resultset.push_back(quad0);
 				//cout << mortonmin << " " << mortonmax<<", ";
 			}
 		}
@@ -273,46 +262,27 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE  - 2 * pos);
 			uint32_t mortonmin = (quad1 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
-			if (resultset.empty()){
-				currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
-				currmax = mortonmax;
-				resultset.insert(
-										std::pair<uint32_t, uint32_t>(currmin, currmax));
-			}else if (mortonmin == currmax + 1) {
-				currmax = mortonmax;
-			} else {
-				resultset.insert(
-						std::pair<uint32_t, uint32_t>(currmin, currmax));
-				currmin = mortonmin;
-				currmax = mortonmax;
-			}
+			resultset.push_back(mortonmin);
+			resultset.push_back(0);  // a signal to indicate all values..
+			resultset.push_back(mortonmax);
 //			cout << mortonmin << " " << mortonmax << ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad1, pos + 1);
 			else {
-				int shift = (32 - 2 * pos);
-				uint32_t mortonmin = (quad1 << shift);
-				uint32_t mask = pow(2, shift) - 1;
-				uint32_t mortonmax = (mortonmin | mask);
-				if (resultset.empty()){
-					currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
-					currmax = mortonmax;
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				}else if (mortonmin == currmax + 1) {
-					currmax = mortonmax;
-				} else {
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-					currmin = mortonmin;
-					currmax = mortonmax;
+				if(DEBUG){
+					int shift = (2*DIMSCALE - 2 * pos);
+					uint32_t mortonmin = (quad1 << shift);
+					uint32_t mask = pow(2, shift) - 1;
+					uint32_t mortonmax = (mortonmin | mask);
+					assert(mortonmin==mortonmax);
 				}
-//				cout << mortonmin << " " << mortonmax<<", ";
+				resultset.push_back(quad1);
+				//cout << mortonmin << " " << mortonmax<<", ";
 			}
 		}
 		delete p;
@@ -330,56 +300,27 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE  - 2 * pos);
 			uint32_t mortonmin = (quad2 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
-			if (resultset.empty()){
-				currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
-				currmax = mortonmax;
-				resultset.insert(
-						std::pair<uint32_t, uint32_t>(currmin, currmax));
-			}else if (mortonmin == currmax + 1) {
-				currmax = mortonmax;
-			} else {
-				if(resultset.find(currmin) != resultset.end()){
-					resultset.erase(currmin);
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				}else
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				currmin = mortonmin;
-				currmax = mortonmax;
-			}
+			resultset.push_back(mortonmin);
+			resultset.push_back(0);  // a signal to indicate all values..
+			resultset.push_back(mortonmax);
 //			cout << mortonmin << " " << mortonmax << ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad2, pos + 1);
 			else {
-				int shift = (32 - 2 * pos);
-				uint32_t mortonmin = (quad2 << shift);
-				uint32_t mask = pow(2, shift) - 1;
-				uint32_t mortonmax = (mortonmin | mask);
-				if (resultset.empty()){
-					currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
-					currmax = mortonmax;
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				}else if(mortonmin == currmax + 1) {
-					currmax = mortonmax;
-				} else {
-					if(resultset.find(currmin) != resultset.end()){
-						resultset.erase(currmin);
-						resultset.insert(
-								std::pair<uint32_t, uint32_t>(currmin, currmax));
-					}else
-						resultset.insert(
-								std::pair<uint32_t, uint32_t>(currmin, currmax));
-					currmin = mortonmin;
-					currmax = mortonmax;
+				if(DEBUG){
+					int shift = (2*DIMSCALE - 2 * pos);
+					uint32_t mortonmin = (quad2 << shift);
+					uint32_t mask = pow(2, shift) - 1;
+					uint32_t mortonmax = (mortonmin | mask);
+					assert(mortonmin==mortonmax);
 				}
-				//				cout << mortonmin << " " << mortonmax << ", ";
+				resultset.push_back(quad2);
+				//cout << mortonmin << " " << mortonmax<<", ";
 			}
 		}
 
@@ -394,46 +335,27 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE  - 2 * pos);
 			uint32_t mortonmin = (quad3 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
-			if (resultset.empty()){
-				currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
-				currmax = mortonmax;
-				resultset.insert(
-						std::pair<uint32_t, uint32_t>(currmin, currmax));
-			}else if (mortonmin == currmax + 1) {
-				currmax = mortonmax;
-			} else {
-				resultset.insert(
-						std::pair<uint32_t, uint32_t>(currmin, currmax));
-				currmin = mortonmin;
-				currmax = mortonmax;
-			}
+			resultset.push_back(mortonmin);
+			resultset.push_back(0);  // a signal to indicate all values..
+			resultset.push_back(mortonmax);
 //				cout << mortonmin << " " << mortonmax << ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad3, pos + 1);
 			else {
-				int shift = (32 - 2 * pos);
-				uint32_t mortonmin = (quad3 << shift);
-				uint32_t mask = pow(2, shift) - 1;
-				uint32_t mortonmax = (mortonmin | mask);
-				if (resultset.empty()){
-					currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
-					currmax = mortonmax;
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-				}else if (mortonmin == currmax + 1) {
-					currmax = mortonmax;
-				} else {
-					resultset.insert(
-							std::pair<uint32_t, uint32_t>(currmin, currmax));
-					currmin = mortonmin;
-					currmax = mortonmax;
+				if(DEBUG){
+					int shift = (2*DIMSCALE - 2 * pos);
+					uint32_t mortonmin = (quad3 << shift);
+					uint32_t mask = pow(2, shift) - 1;
+					uint32_t mortonmax = (mortonmin | mask);
+					assert(mortonmin==mortonmax);
 				}
-//					cout << mortonmin << " " << mortonmax<<", ";
+				resultset.push_back(quad3);
+				//cout << mortonmin << " " << mortonmax<<", ";
 			}
 		}
 
