@@ -1,8 +1,17 @@
 /*
  * main.cpp
  *
- *  Created on: Dec 28, 2020
+ *  Generated on: Dec 28, 2020
  *      Author: mustafautku
+ *
+ *
+ *     Progrma finds RANGE QUERY's morton codes for different scalings, at most 32-bit mortons.
+ *     I am using Quadtree technique to genereate the codes.
+ *     to generate morton partitions of the query region, 16-bit- morton codes seems enough. That means DIMSCALE to be 8.
+ *     For higher DIMSCALE values, the number of parititions increase very much.
+ *     If you are going to apply the query (that is represented 16-bit morton partitions) on a a B-tree that is storing 32-bit spatial data morton codes,
+ *     then you should convert the generated partitions to 32-bit-scale of mortons.
+ *
  */
 
 
@@ -11,7 +20,7 @@
 /*
  * main.cpp
  *
- *  Created on: Dec 15, 2020
+ *  Generated on: Dec 15, 2020
  *      Author: mustafautku
  */
 // Utility headers
@@ -27,7 +36,8 @@ using namespace SpatialIndex;
 #define DEBUG 0
 #define TESTING 0
 
-static int DIMSCALE=16;  // #bits to represent single dim.
+static int DIMSCALE=8;  // #bits used to represent single dim.  8 seems enough to represent the shape of query. ( to use
+static int MAXNUMCELLINDIM = pow(2, DIMSCALE) - 1;
 std::map<uint32_t, uint32_t> resultset;
 uint32_t currmin;
 uint32_t currmax;
@@ -42,7 +52,8 @@ int main(int argc, char *argv[]) {
 	// bu arada y,x sırasıyla interleave ediyor.
 
 	Tools::Random rnd;
-	int scale = pow(2, 16) - 1;
+
+
 	if(TESTING){
 		cout << morton2D_64_encode(0, 0) << endl;
 		cout << morton2D_64_encode(1, 0) << endl;
@@ -52,16 +63,22 @@ int main(int argc, char *argv[]) {
 
 		x = 0.5;
 		y = 0.5;
-		int xs = x * scale;
-		int ys = y * scale;
-		cout << morton2D_32_encode(xs, ys) << endl;
+		int xs = x * MAXNUMCELLINDIM;
+		int ys = y * MAXNUMCELLINDIM;
+		uint32_t morcod = morton2D_32_encode(xs, ys);
+		cout << "morcod of center:"<< morcod<< endl;
+
+		uint_fast16_t x1,y1;
+		morton2D_32_decode(morcod,x1,y1);
+		cout << "decoding:" << x1 << '\t' << y1 << endl;  // shows the number: 2^16  / 2 = 32767
+		cout << "decoding:" << (double)  x1/MAXNUMCELLINDIM << '\t' <<(double) y1/MAXNUMCELLINDIM << endl;  // move it into unit area.
 
 
 		x = rnd.nextUniformDouble();
 		y = rnd.nextUniformDouble();
 		cout << x << ", " << y << endl;
 
-		cout << morton2D_32_encode(x * scale, y * scale) << endl;
+		cout << morton2D_32_encode(x * MAXNUMCELLINDIM, y * MAXNUMCELLINDIM) << endl;
 
 		// Test bit-wise operations
 		uint32_t v1 = 1;
@@ -84,15 +101,15 @@ int main(int argc, char *argv[]) {
 		cout << "v4: " << v4 << endl;
 	}
 
-	// FINDING "morton-ranges" of a range query
 
 
+	// FINDING "morton-ranges" of a range query by using QuadTree approach.
 
 	// TEST QUERY: (0,0) (2*1/2^16, 1/2^16) Test the SMALLEST cells.
-//	double xl = 2*1/pow(2,16);
-//	double yl = 0.0;//2*1/pow(2,16);
-//	double xh = 5*1/pow(2,16);
-//	double yh = 2*1/pow(2,16);
+//	double xl = 0.0; // 2*1/pow(2,16);
+//	double yl = 0.0; // 2*1/pow(2,16);
+//	double xh = 1.0; // 5*1/pow(2,16);
+//	double yh = 1.0; //2*1/pow(2,16);
 //	double *plow= new double[2]{xl,yl};
 //	double *phigh= new double[2]{xh,yh};
 
@@ -108,41 +125,44 @@ int main(int argc, char *argv[]) {
 	double xl,xh;// = xl+dx;
 	double yl,yh;// = yl+dy;
 
-//	do{   // generate a random query within unit area
-//		xl = rnd.nextUniformDouble();
-//		yl = rnd.nextUniformDouble();
-//		double dx = rnd.nextUniformDouble(0.3, 0.4);
-//		double dy = rnd.nextUniformDouble(0.3, 0.4);
-//		xh=xl+dx;
-//		yh=yl+dy;
-//	}while(xh>1.0 || yh>1.0);
-//	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
-//
+	do{   // generate a random query within unit area
+		xl = rnd.nextUniformDouble();
+		yl = rnd.nextUniformDouble();
+		double dx = rnd.nextUniformDouble(0.3, 0.4);
+		double dy = rnd.nextUniformDouble(0.3, 0.4);
+		xh=xl+dx;
+		yh=yl+dy;
+	}while(xh>1.0 || yh>1.0);
+	cout<< std::setprecision(25) << xl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< yh << " "<<endl;
+
 	// ALIGNMENT of query corners. Approximate doubles to multiples of 1/pow(2,16). this increase the exec. time without lose of accuracy.
 	// thanks to this alignment in the findMortonRanges, it never enters "else if (rq->getIntersectingArea(*subunit) > 0) { else pos==DIMSCALE" section..
-//	int yuvarlama=(int)(xl/(1/pow(2,16)));
-//	xl=(1/pow(2,16))*yuvarlama;
-//
-//	yuvarlama=(int)(xh/(1/pow(2,16)));
-//	xh=(1/pow(2,16))*yuvarlama;
-//
-//	yuvarlama=(int)(yl/(1/pow(2,16)));
-//	yl=(1/pow(2,16))*yuvarlama;
-//
-//	yuvarlama=(int)(yh/(1/pow(2,16)));
-//	yh=(1/pow(2,16))*yuvarlama;
-//	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
+	int yuvarlama=(int)(xl/(1/pow(2,DIMSCALE)));
+	xl=(1/pow(2,DIMSCALE))*yuvarlama;
 
-	// Test case:  All values below are multiples of 1/pow(2,16).
-	xl=0.0445404052734375;
-	xh=0.3786163330078125;
-	yl=0.100006103515625;
-	yh=0.45556640625;
+	yuvarlama=(int)(xh/(1/pow(2,DIMSCALE)));
+	xh=(1/pow(2,DIMSCALE))*yuvarlama;
 
-	double *plow= new double[2]{xl,yl};
+	yuvarlama=(int)(yl/(1/pow(2,DIMSCALE)));
+	yl=(1/pow(2,DIMSCALE))*yuvarlama;
+
+	yuvarlama=(int)(yh/(1/pow(2,DIMSCALE)));
+	yh=(1/pow(2,DIMSCALE))*yuvarlama;
+
+	cout<<std::setprecision(25)<<  xl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< yh << " "<<endl;
+
+	// Test case:  All values below are multiples of 1/pow(2,16), for example.
+//	xl=0.0445404052734375;
+//	xh=0.3786163330078125;
+//	yl=0.100006103515625;
+//	yh=0.45556640625;
+
+	double *plow = new double[2]{xl,yl};
 	double *phigh= new double[2]{xh,yh};
-	cout << morton2D_32_encode((uint16_t)(xl*scale),(uint16_t)(yl*scale)) << " -- ";
-	cout << morton2D_32_encode((uint16_t)(xh*scale),(uint16_t)(yh*scale)) << endl;
+
+
+	cout << morton2D_32_encode((uint16_t)(xl*MAXNUMCELLINDIM),(uint16_t)(yl*MAXNUMCELLINDIM)) << " -- ";
+	cout << morton2D_32_encode((uint16_t)(xh*MAXNUMCELLINDIM),(uint16_t)(yh*MAXNUMCELLINDIM)) << endl;
 
 
 	Region *query = new  Region(plow,phigh,2);
@@ -156,11 +176,15 @@ int main(int argc, char *argv[]) {
 	Region *unit= new Region(plow,phigh,2);
 	delete plow;
 	delete phigh;
-	int pos=1;
+
+	int pos=1;  // start using 1 bit for each dim.
 	uint32_t mc=0;
 	currmin=0;
 	currmax=0;
-	findMortonRanges(query,unit,mc,pos);
+
+	findMortonRanges(query,unit,mc,pos);  // here traverse the quad-tree recursively
+
+	// last partititon is being added below.
 	if(resultset.find(currmin) != resultset.end()){
 		resultset.erase(currmin);
 		resultset.insert(
@@ -168,12 +192,35 @@ int main(int argc, char *argv[]) {
 	}else
 	resultset.insert(
 					std::pair<uint32_t, uint32_t>(currmin, currmax));
-	map<uint32_t, uint32_t>::iterator itr;
-	for (itr = resultset.begin(); itr != resultset.end(); ++itr) {
+
+	// scan the partitions
+	cout <<"Number of partititions: "<< resultset.size()<<endl;
+	for (auto itr = resultset.begin(); itr != resultset.end();itr++) {
 		cout << '\t' << itr->first
 				<< '\t' << itr->second << '\n';
 	}
 	cout << endl;
+
+
+	cout << " POINTS in the QUERY RANGE:" << endl;
+	// Now generate "double end points of partitions" to see the queryrange in gnuplot..PLOTS the range query correct. No error found.
+	// generates many points at the edges and few points for the internal area. thus I made reduction by eliminating single "points(cells)"
+	int reducedPartitions=0;
+	for (auto itr = resultset.begin(); itr != resultset.end(); ++itr) {
+
+		if( itr->second > itr->first  ){  //Remove smallest quads.  only select clustered cells(quads) or half of quad.
+			reducedPartitions++;
+			uint_fast16_t x1,y1, x2,y2;
+			morton2D_32_decode(itr->first,x1,y1);
+			morton2D_32_decode(itr->second,x2,y2);
+
+			cout << std::setprecision(10) << (double)x1/MAXNUMCELLINDIM << '\t' << std::setprecision(10)<< (double) y1/MAXNUMCELLINDIM << endl;
+			cout << std::setprecision(10) << (double)x2/MAXNUMCELLINDIM << '\t' <<std::setprecision(10) << (double) y2/MAXNUMCELLINDIM << endl;
+
+		}
+	}
+	cout <<"Number of partititions (after reduction): "<< reducedPartitions <<endl;  // Sometimes no reduction may not be possible depending on the query's locaiton.
+		cout << endl;
 
 	delete query;
 	delete unit;
@@ -201,7 +248,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << (*subunit) << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad0 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -273,7 +320,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad1 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -330,7 +377,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad2 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -394,7 +441,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (32 - 2 * pos);
+			int shift = (2*DIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad3 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
