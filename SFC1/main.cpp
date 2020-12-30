@@ -108,28 +108,36 @@ int main(int argc, char *argv[]) {
 	double xl,xh;// = xl+dx;
 	double yl,yh;// = yl+dy;
 
-	do{   // generate a random query within unit area
-		xl = rnd.nextUniformDouble();
-		yl = rnd.nextUniformDouble();
-		double dx = rnd.nextUniformDouble(0.3, 0.4);
-		double dy = rnd.nextUniformDouble(0.3, 0.4);
-		xh=xl+dx;
-		yh=yl+dy;
-	}while(xh>1.0 || yh>1.0);
-	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
+//	do{   // generate a random query within unit area
+//		xl = rnd.nextUniformDouble();
+//		yl = rnd.nextUniformDouble();
+//		double dx = rnd.nextUniformDouble(0.3, 0.4);
+//		double dy = rnd.nextUniformDouble(0.3, 0.4);
+//		xh=xl+dx;
+//		yh=yl+dy;
+//	}while(xh>1.0 || yh>1.0);
+//	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
+//
+	// ALIGNMENT of query corners. Approximate doubles to multiples of 1/pow(2,16). this increase the exec. time without lose of accuracy.
+	// thanks to this alignment in the findMortonRanges, it never enters "else if (rq->getIntersectingArea(*subunit) > 0) { else pos==DIMSCALE" section..
+//	int yuvarlama=(int)(xl/(1/pow(2,16)));
+//	xl=(1/pow(2,16))*yuvarlama;
+//
+//	yuvarlama=(int)(xh/(1/pow(2,16)));
+//	xh=(1/pow(2,16))*yuvarlama;
+//
+//	yuvarlama=(int)(yl/(1/pow(2,16)));
+//	yl=(1/pow(2,16))*yuvarlama;
+//
+//	yuvarlama=(int)(yh/(1/pow(2,16)));
+//	yh=(1/pow(2,16))*yuvarlama;
+//	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
 
-	int yuvarlama=(int)(xl/(1/pow(2,16)));
-	xl=(1/pow(2,16))*yuvarlama;
-
-	yuvarlama=(int)(xh/(1/pow(2,16)));
-	xh=(1/pow(2,16))*yuvarlama;
-
-	yuvarlama=(int)(yl/(1/pow(2,16)));
-	yl=(1/pow(2,16))*yuvarlama;
-
-	yuvarlama=(int)(yh/(1/pow(2,16)));
-	yh=(1/pow(2,16))*yuvarlama;
-	cout<< xl << " "<<xh << " "<<yl << " "<<yh << " "<<endl;
+	// Test case:  All values below are multiples of 1/pow(2,16).
+	xl=0.0445404052734375;
+	xh=0.3786163330078125;
+	yl=0.100006103515625;
+	yh=0.45556640625;
 
 	double *plow= new double[2]{xl,yl};
 	double *phigh= new double[2]{xh,yh};
@@ -197,12 +205,8 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			uint32_t mortonmin = (quad0 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
-//			if (mortonmin==0 && currmin == 0){
-//				currmax = mortonmax;
-//				resultset.insert(
-//						std::pair<uint32_t, uint32_t>(currmin, currmax));
-//			}
-			if (resultset.empty()){//if (currmin==0){
+
+			if (resultset.empty()){
 				currmin=mortonmin;
 				currmax = mortonmax;
 				resultset.insert(
@@ -226,17 +230,13 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad0, pos + 1);
-			else {
-				int shift = (32 - 2 * pos);
+			else {// NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
+				int shift = (2*DIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad0 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
-//				if (mortonmin==0 && currmin == 0){
-//					currmax = mortonmax;
-//					resultset.insert(
-//											std::pair<uint32_t, uint32_t>(currmin, currmax));
-//				}
-				if (resultset.empty()){//if (currmin==0){
+
+				if (resultset.empty()){
 					currmin=mortonmin;
 					currmax = mortonmax;
 					resultset.insert(
@@ -278,7 +278,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
 			if (resultset.empty()){
-				currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
+				currmin = mortonmin;
 				currmax = mortonmax;
 				resultset.insert(
 										std::pair<uint32_t, uint32_t>(currmin, currmax));
@@ -294,13 +294,13 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad1, pos + 1);
-			else {
-				int shift = (32 - 2 * pos);
+			else {// NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
+				int shift = (2*DIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad1 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
 				if (resultset.empty()){
-					currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
+					currmin = mortonmin;
 					currmax = mortonmax;
 					resultset.insert(
 							std::pair<uint32_t, uint32_t>(currmin, currmax));
@@ -335,7 +335,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
 			if (resultset.empty()){
-				currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
+				currmin = mortonmin;
 				currmax = mortonmax;
 				resultset.insert(
 						std::pair<uint32_t, uint32_t>(currmin, currmax));
@@ -356,13 +356,13 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad2, pos + 1);
-			else {
-				int shift = (32 - 2 * pos);
+			else { // NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
+				int shift = (2*DIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad2 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
 				if (resultset.empty()){
-					currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
+					currmin = mortonmin;
 					currmax = mortonmax;
 					resultset.insert(
 							std::pair<uint32_t, uint32_t>(currmin, currmax));
@@ -399,7 +399,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
 			if (resultset.empty()){
-				currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
+				currmin = mortonmin;
 				currmax = mortonmax;
 				resultset.insert(
 						std::pair<uint32_t, uint32_t>(currmin, currmax));
@@ -415,13 +415,13 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
 			if (pos < DIMSCALE)
 				findMortonRanges(rq, subunit, quad3, pos + 1);
-			else {
-				int shift = (32 - 2 * pos);
+			else {  // NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
+				int shift = (2*DIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad3 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
 				if (resultset.empty()){
-					currmin = mortonmin;   // else we are at the left-low grids with code 0 and 1.
+					currmin = mortonmin;
 					currmax = mortonmax;
 					resultset.insert(
 							std::pair<uint32_t, uint32_t>(currmin, currmax));
