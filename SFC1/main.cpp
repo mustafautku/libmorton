@@ -36,8 +36,8 @@ using namespace SpatialIndex;
 #define DEBUG 0
 #define TESTING 0
 
-static int DIMSCALE=8;  // #bits used to represent single dim.  8 seems enough to represent the shape of query. ( to use
-static int MAXNUMCELLINDIM = pow(2, DIMSCALE) - 1;
+static int QUERYDIMSCALE=8;  // #bits used to represent single dim.  8 seems enough to represent the shape of query. ( to use
+//static int MAXNUMCELLINDIM = pow(2, QUERYDIMSCALE) - 1;
 std::map<uint32_t, uint32_t> resultset;
 uint32_t currmin;
 uint32_t currmax;
@@ -63,22 +63,22 @@ int main(int argc, char *argv[]) {
 
 		x = 0.5;
 		y = 0.5;
-		int xs = x * MAXNUMCELLINDIM;
-		int ys = y * MAXNUMCELLINDIM;
+		int xs = x * (pow(2, QUERYDIMSCALE) - 1);
+		int ys = y * (pow(2, QUERYDIMSCALE) - 1);
 		uint32_t morcod = morton2D_32_encode(xs, ys);
 		cout << "morcod of center:"<< morcod<< endl;
 
 		uint_fast16_t x1,y1;
 		morton2D_32_decode(morcod,x1,y1);
 		cout << "decoding:" << x1 << '\t' << y1 << endl;  // shows the number: 2^16  / 2 = 32767
-		cout << "decoding:" << (double)  x1/MAXNUMCELLINDIM << '\t' <<(double) y1/MAXNUMCELLINDIM << endl;  // move it into unit area.
+		cout << "decoding:" << (double)  x1/pow(2, QUERYDIMSCALE) << '\t' <<(double) y1/pow(2, QUERYDIMSCALE) << endl;  // move it into unit area.
 
 
 		x = rnd.nextUniformDouble();
 		y = rnd.nextUniformDouble();
 		cout << x << ", " << y << endl;
 
-		cout << morton2D_32_encode(x * MAXNUMCELLINDIM, y * MAXNUMCELLINDIM) << endl;
+		cout << morton2D_32_encode(x * (pow(2, QUERYDIMSCALE) - 1), y * (pow(2, QUERYDIMSCALE) - 1)) << endl;
 
 		// Test bit-wise operations
 		uint32_t v1 = 1;
@@ -136,18 +136,18 @@ int main(int argc, char *argv[]) {
 	cout<< std::setprecision(25) << xl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< yh << " "<<endl;
 
 	// ALIGNMENT of query corners. Approximate doubles to multiples of 1/pow(2,16). this increase the exec. time without lose of accuracy.
-	// thanks to this alignment in the findMortonRanges, it never enters "else if (rq->getIntersectingArea(*subunit) > 0) { else pos==DIMSCALE" section..
-	int yuvarlama=(int)(xl/(1/pow(2,DIMSCALE)));
-	xl=(1/pow(2,DIMSCALE))*yuvarlama;
+	// thanks to this alignment in the findMortonRanges, it never enters "else if (rq->getIntersectingArea(*subunit) > 0) { else pos==QUERYDIMSCALE" section..
+	int yuvarlama=(int)(xl/(1/pow(2,QUERYDIMSCALE)));
+	xl=(1/pow(2,QUERYDIMSCALE))*yuvarlama;
 
-	yuvarlama=(int)(xh/(1/pow(2,DIMSCALE)));
-	xh=(1/pow(2,DIMSCALE))*yuvarlama;
+	yuvarlama=(int)(xh/(1/pow(2,QUERYDIMSCALE)));
+	xh=(1/pow(2,QUERYDIMSCALE))*yuvarlama;
 
-	yuvarlama=(int)(yl/(1/pow(2,DIMSCALE)));
-	yl=(1/pow(2,DIMSCALE))*yuvarlama;
+	yuvarlama=(int)(yl/(1/pow(2,QUERYDIMSCALE)));
+	yl=(1/pow(2,QUERYDIMSCALE))*yuvarlama;
 
-	yuvarlama=(int)(yh/(1/pow(2,DIMSCALE)));
-	yh=(1/pow(2,DIMSCALE))*yuvarlama;
+	yuvarlama=(int)(yh/(1/pow(2,QUERYDIMSCALE)));
+	yh=(1/pow(2,QUERYDIMSCALE))*yuvarlama;
 
 	cout<<std::setprecision(25)<<  xl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< yh << " "<<endl;
 
@@ -161,8 +161,8 @@ int main(int argc, char *argv[]) {
 	double *phigh= new double[2]{xh,yh};
 
 
-	cout << morton2D_32_encode((uint16_t)(xl*MAXNUMCELLINDIM),(uint16_t)(yl*MAXNUMCELLINDIM)) << " -- ";
-	cout << morton2D_32_encode((uint16_t)(xh*MAXNUMCELLINDIM),(uint16_t)(yh*MAXNUMCELLINDIM)) << endl;
+	cout << morton2D_32_encode((uint16_t)(xl*(pow(2, QUERYDIMSCALE) - 1)),(uint16_t)(yl*(pow(2, QUERYDIMSCALE) - 1))) << " -- ";
+	cout << morton2D_32_encode((uint16_t)(xh*(pow(2, QUERYDIMSCALE) - 1)),(uint16_t)(yh*(pow(2, QUERYDIMSCALE) - 1))) << endl;
 
 
 	Region *query = new  Region(plow,phigh,2);
@@ -214,8 +214,23 @@ int main(int argc, char *argv[]) {
 			morton2D_32_decode(itr->first,x1,y1);
 			morton2D_32_decode(itr->second,x2,y2);
 
-			cout << std::setprecision(10) << (double)x1/MAXNUMCELLINDIM << '\t' << std::setprecision(10)<< (double) y1/MAXNUMCELLINDIM << endl;
-			cout << std::setprecision(10) << (double)x2/MAXNUMCELLINDIM << '\t' <<std::setprecision(10) << (double) y2/MAXNUMCELLINDIM << endl;
+			double xx1=(double)x1/pow(2, QUERYDIMSCALE);
+			double yy1=(double)y1/pow(2, QUERYDIMSCALE);
+			double xx2=(double)x2/pow(2, QUERYDIMSCALE);
+			double yy2=(double)y2/pow(2, QUERYDIMSCALE);
+
+			cout << std::setprecision(10) << xx1 << '\t' << std::setprecision(10)<< yy1 << endl;
+			cout << std::setprecision(10) << xx2 << '\t' <<std::setprecision(10) << yy2 << endl;
+
+			// convert 16-bit morton code to 32-bit codes:  2 ways: 1-transform by scaling over morton space 2- transform for each double dimension
+//			uint32_t bit32mc1=( itr->first / pow(2, 2*QUERYDIMSCALE) ) * pow(2, 4* QUERYDIMSCALE);
+//			uint32_t bit32mc2=( itr->second / pow(2,2*QUERYDIMSCALE) ) * pow(2, 4* QUERYDIMSCALE);
+//
+//			uint32_t bit32mc11= morton2D_32_encode(xx1*pow(2, 2*QUERYDIMSCALE), yy1*pow(2, 2*QUERYDIMSCALE));
+//			uint32_t bit32mc22=morton2D_32_encode(xx2*pow(2, 2*QUERYDIMSCALE), yy2*pow(2, 2*QUERYDIMSCALE));
+//
+//			cout << bit32mc1 << ',' << bit32mc2 << endl;
+//			cout << bit32mc11 << ',' << bit32mc22 << endl;
 
 		}
 	}
@@ -248,7 +263,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << (*subunit) << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (2*DIMSCALE - 2 * pos);
+			int shift = (2*QUERYDIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad0 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -275,10 +290,10 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			}
 			//cout << mortonmin << " " << mortonmax<< ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
-			if (pos < DIMSCALE)
+			if (pos < QUERYDIMSCALE)
 				findMortonRanges(rq, subunit, quad0, pos + 1);
-			else {// NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
-				int shift = (2*DIMSCALE - 2 * pos);
+			else {// NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). QUERYDIMSCALE=16
+				int shift = (2*QUERYDIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad0 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
@@ -320,7 +335,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (2*DIMSCALE - 2 * pos);
+			int shift = (2*QUERYDIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad1 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -339,10 +354,10 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			}
 //			cout << mortonmin << " " << mortonmax << ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
-			if (pos < DIMSCALE)
+			if (pos < QUERYDIMSCALE)
 				findMortonRanges(rq, subunit, quad1, pos + 1);
-			else {// NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
-				int shift = (2*DIMSCALE - 2 * pos);
+			else {// NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). QUERYDIMSCALE=16
+				int shift = (2*QUERYDIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad1 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
@@ -377,7 +392,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (2*DIMSCALE - 2 * pos);
+			int shift = (2*QUERYDIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad2 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -401,10 +416,10 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			}
 //			cout << mortonmin << " " << mortonmax << ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
-			if (pos < DIMSCALE)
+			if (pos < QUERYDIMSCALE)
 				findMortonRanges(rq, subunit, quad2, pos + 1);
-			else { // NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
-				int shift = (2*DIMSCALE - 2 * pos);
+			else { // NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). QUERYDIMSCALE=16
+				int shift = (2*QUERYDIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad2 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
@@ -441,7 +456,7 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 		if (DEBUG)
 			cout << *subunit << endl;
 		if (rq->containsRegion(*subunit)) {
-			int shift = (2*DIMSCALE - 2 * pos);
+			int shift = (2*QUERYDIMSCALE - 2 * pos);
 			uint32_t mortonmin = (quad3 << shift);
 			uint32_t mask = pow(2, shift) - 1;
 			uint32_t mortonmax = (mortonmin | mask);
@@ -460,10 +475,10 @@ void findMortonRanges(Region *rq, Region *runit, uint32_t mc,int pos){
 			}
 //				cout << mortonmin << " " << mortonmax << ", ";
 		} else if (rq->getIntersectingArea(*subunit) > 0) {
-			if (pos < DIMSCALE)
+			if (pos < QUERYDIMSCALE)
 				findMortonRanges(rq, subunit, quad3, pos + 1);
-			else {  // NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). DIMSCALE=16
-				int shift = (2*DIMSCALE - 2 * pos);
+			else {  // NEVER ENTERs HERE IFF CORNERS OF RANGE QUERY is ALIGNED TO MULTIPLES OF 1/pow(2,16). QUERYDIMSCALE=16
+				int shift = (2*QUERYDIMSCALE - 2 * pos);
 				uint32_t mortonmin = (quad3 << shift);
 				uint32_t mask = pow(2, shift) - 1;
 				uint32_t mortonmax = (mortonmin | mask);
