@@ -6,6 +6,8 @@
 *.user
 *.sln.docstates
 
+.dbeaver/
+
 # Build results
 
 [Dd]ebug/
