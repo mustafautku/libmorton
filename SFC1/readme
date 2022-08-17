@@ -1,22 +1,26 @@
- Simple MORTON CODE TEST.
- 
+
+
+ main.cpp includes findMortonRanges function that is used in window query execution.
+ This code is also used (copied) to  Berkeley-DB-tutorials/bdb-4-part-b-tree-with-bulks Partitioned-B-tree.cpp.
+
+SOME PRILIMARIES:
+--------------------
  32 or 64bit Morton code can be generated with morton2D_32_encode(...)  or morton2D_64_encode(...)
- 
- for double coordinates( [0:1] ),  
+
+ for double coordinates( [0:1] ),
  you should scale it to (2^16)-1  for 32-bit morton code. Because 16 bit comes from each dimension.
  you should scale it to (2^32)-1  for 64-bit morton code. Because 32 bit comes from each dimension.
- 
+
  32-bit morton:
  The highest code is 2^32= 4294967296.  This is the total # of cells starting from 0 to 4294967295.
  In [0:1] unit space, f.e. (x,y)=(0.5, 0.5) is within the (1/4) * 4294967296 = 1073741824. cell
- try it for 4-bit morton code--> 16 codes.  Each corrdinate use 2 bits. 0.5,0.5 is the center of unit area and 
+ try it for 4-bit morton code--> 16 codes.  Each corrdinate use 2 bits. 0.5,0.5 is the center of unit area and
  sits into 01 -01 = 0011 = 3.cell. (# of the cell.) Actually it is the 1/4 * 16= 4. cell.
- 
+
  Last point:
  x-y coordinates can interleave in 2 different forms:  x-y  or y-x
  01 - 10  =  0110 = 6
  01 - 10 =   1001 = 9
- Both is true, both starts from (0,0) center.  First generates vertical z,  second generates horizantal z.  
- this library uses the later one, horizontal z.
- 
- 
+ Both is true, both starts from (0,0) center.  First generates vertical z,  second generates horizantal z.
+ this library uses the later one(y-x), horizontal z.
+

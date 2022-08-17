@@ -5,7 +5,7 @@
  *      Author: mustafautku
  *
  *
- *     Progrma finds RANGE QUERY's morton codes for different scalings, at most 32-bit mortons.
+ *     Program finds RANGE QUERY's morton codes for different scalings, at most 32-bit mortons.
  *     I am using Quadtree technique to genereate the codes.
  *     to generate morton partitions of the query region, 16-bit- morton codes seems enough. That means DIMSCALE to be 8.
  *     For higher DIMSCALE values, the number of parititions increase very much.
@@ -13,9 +13,6 @@
  *     then you should convert the generated partitions to 32-bit-scale of mortons.
  *
  */
-
-
-
 
 /*
  * main.cpp
@@ -34,9 +31,14 @@ using namespace libmorton;
 using namespace SpatialIndex;
 
 #define DEBUG 0
-#define TESTING 0
+#define TESTING 1
 
-static int QUERYDIMSCALE=8;  // #bits used to represent single dim.  8 seems enough to represent the shape of query. ( to use
+static int QUERYDIMSCALE=8;  // DEPTH of z-curve = NUMBER OF MAX SPLITS = bits used to represent single dim.  8 seems enough to represent the shape of query.
+// naming is a little confusing. But, the real meaning is we have a double in unit area [0,1]. If we want to represent the space 2^16 = 65535 cells (codes),
+// each dim will have 2^8=256 slices. So, we have to *scale* double value to this range [0-2^8]
+// Boylece unit area yı 65535 hucre ile temsil ettik.
+// Precision daha iyi olmasini istersek DEPTH= MAX_SPLIT= 32 yapabilriz. Yani unit area yı 2^64 tane hucre ile temsile edeceğiz...
+
 //static int MAXNUMCELLINDIM = pow(2, QUERYDIMSCALE) - 1;
 std::map<uint32_t, uint32_t> resultset;
 uint32_t currmin;
@@ -49,24 +51,34 @@ int main(int argc, char *argv[]) {
 	// interleaving order (x,y)  : shape of z: z uclari yukarı aşagi bakıyor
 	// interleaving order (y,x)  : shape of z: z gibi.
 
-	// bu arada y,x sırasıyla interleave ediyor.
+	// libmorton y,x sırasıyla interleave ediyor.
 
 	Tools::Random rnd;
 
 
 	if(TESTING){
+		// Her eksen [0- 2^32] aralıgında bir deger bekliyor.
 		cout << morton2D_64_encode(0, 0) << endl;
-		cout << morton2D_64_encode(1, 0) << endl;
-		cout << morton2D_64_encode(50, 12) << endl;
+		cout << morton2D_64_encode(1, 0) << endl;  // y:00 x:01  --> 0001
+		cout << morton2D_64_encode(50, 12) << endl; // y:12 x:50  --> 001100  110010  --> 010110100100 = 1444
 
 		double x, y;
 
 		x = 0.5;
 		y = 0.5;
-		int xs = x * (pow(2, QUERYDIMSCALE) - 1);
-		int ys = y * (pow(2, QUERYDIMSCALE) - 1);
+		int xs = x * (pow(2, QUERYDIMSCALE) - 1); // scale to [0,255]
+		int ys = y * (pow(2, QUERYDIMSCALE) - 1); // scale to [0,255]
+
+		cout << "max morcod:"<< morton2D_32_encode(255, 255)<< endl;  // 65535
+		cout << "max morcod:"<< morton2D_64_encode(255, 255)<< endl;  // 65535. evet aynı deger. 65535 tane kod kullanmak istedik. Her iki calsma uzayı da bize bunu verdi.
+
 		uint32_t morcod = morton2D_32_encode(xs, ys);
 		cout << "morcod of center:"<< morcod<< endl;
+
+		cout << "morcod:"<< morton2D_32_encode(256, 256)<< endl;  // 65535*3 =196608
+		cout << "morcod:"<< morton2D_64_encode(256, 256)<< endl;  // 65535*3 =196608. evet aynı deger. 65535 tane kod kullanmak istedik. Her iki calsma uzayı da bize bunu verdi.
+
+		// Yani uretilen morton kodlari sol alt kose pix'in morton kodu. Cell ne kadar buyuk olursa olsun aynı cunku.!!!
 
 		uint_fast16_t x1,y1;
 		morton2D_32_decode(morcod,x1,y1);
@@ -99,6 +111,7 @@ int main(int argc, char *argv[]) {
 		uint32_t v4 = v1 | v2;  // 10000 | 1100 = 28
 		cout << "v3: " << v3 << endl;
 		cout << "v4: " << v4 << endl;
+		return 0;
 	}
 
 
