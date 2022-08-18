@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
 	// FINDING "morton-ranges" of a range query by using QuadTree approach.
 	// Use small width for understanding with debugging!!
-		WIDTH=2;
+		WIDTH=1;
 
 	// TEST QUERY #1: (0,0) (1,1) Test the whole area.
 //	xl = 0.0;
@@ -179,25 +179,25 @@ int main(int argc, char *argv[]) {
 	xl=0.3;
 	yl=0.2;
 	xh=0.4;
-	yh=0.4;
+	yh=0.6;
 
 	cout << " Original window query::"<<endl;
 	cout<< std::setprecision(25) << xl << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yh << " "<<endl;
 
 	// ALIGNMENT of query corners. Approximate doubles to multiples of 1/pow(2,16). this increase the exec. time without lose of accuracy.
 	// thanks to this alignment in the findMortonRanges, it never enters "else if (rq->getIntersectingArea(*subunit) > 0) { else pos==WIDTH" section..
-	// xl ve yl yi sol-alt koseye; xh ve yh'yi sag ust koseye cekersek (yani biraz genisleterek) false hit'ler katmıs olacagiz. Ancak cok az tabi.
-//	int yuvarlama=(int)(xl/(1/pow(2,WIDTH)));
-//	xl=(1/pow(2,WIDTH))*yuvarlama;
-//
-//	yuvarlama=(int)(yl/(1/pow(2,WIDTH)));
-//	yl=(1/pow(2,WIDTH))*yuvarlama;
-//
-//	yuvarlama=ceil((xh/(1/pow(2,WIDTH))));
-//	xh=(1/pow(2,WIDTH))*yuvarlama;
-//
-//	yuvarlama=ceil((yh/(1/pow(2,WIDTH))));
-//	yh=(1/pow(2,WIDTH))*yuvarlama;
+	// xl ve yl yi sol-alt koseye; xh ve yh'yi da sol alt koseye cekmek gerek. Cunku sag ust köşe mevcut hucrenin dışı.
+	int yuvarlama=(int)(xl/(1/pow(2,WIDTH)));
+	xl=(1/pow(2,WIDTH))*yuvarlama;
+
+	yuvarlama=(int)(yl/(1/pow(2,WIDTH)));
+	yl=(1/pow(2,WIDTH))*yuvarlama;
+
+	yuvarlama=ceil((xh/(1/pow(2,WIDTH))));
+	xh=(1/pow(2,WIDTH))*yuvarlama;
+
+	yuvarlama=ceil((yh/(1/pow(2,WIDTH))));
+	yh=(1/pow(2,WIDTH))*yuvarlama;
 
 	cout << " window query after yuvarlama::"<<endl;
 	cout<< std::setprecision(25) << xl << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yh << " "<<endl;
