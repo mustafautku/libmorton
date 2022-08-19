@@ -25,6 +25,9 @@
 #include "math.h"
 #include <iostream>
 #include <spatialindex/SpatialIndex.h>
+#include <time.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 using namespace std;
 using namespace libmorton;
@@ -135,7 +138,7 @@ int main(int argc, char *argv[]) {
 
 	// FINDING "morton-ranges" of a range query by using QuadTree approach.
 	// Use small width for understanding with debugging!!
-		WIDTH=1;
+		WIDTH=16;
 
 	// TEST QUERY #1: (0,0) (1,1) Test the whole area.
 //	xl = 0.0;
@@ -175,28 +178,40 @@ int main(int argc, char *argv[]) {
 		yh=yl+dy;
 	}while(xh>1.0 || yh>1.0);
 
+	struct timeval start_time, end_time;
+	double secs;
+	(void)gettimeofday(&start_time, NULL);
 	// TEST yuvarlama:
-	xl=0.3;
-	yl=0.2;
-	xh=0.4;
-	yh=0.6;
+//	xl=0.1;
+//	yl=0.1;
+//	xh=0.2;
+//	yh=0.3;
+	xl=0.4786022785684629354818753;
+	yl=0.5610612245512953677462065;
+	xh=0.8401296921292444874751482;
+	yh=0.9576920172544896026067818;
 
 	cout << " Original window query::"<<endl;
 	cout<< std::setprecision(25) << xl << " "<<std::setprecision(25)<< yl << " "<<std::setprecision(25)<< xh << " "<<std::setprecision(25)<< yh << " "<<endl;
 
 	// ALIGNMENT of query corners. Approximate doubles to multiples of 1/pow(2,16). this increase the exec. time without lose of accuracy.
 	// thanks to this alignment in the findMortonRanges, it never enters "else if (rq->getIntersectingArea(*subunit) > 0) { else pos==WIDTH" section..
-	// xl ve yl yi sol-alt koseye; xh ve yh'yi da sol alt koseye cekmek gerek. Cunku sag ust köşe mevcut hucrenin dışı.
+	// xl ve yl yi sol-alt koseye; xh ve yh'yi da sag ust koseye cekmek gerek. Bu sorgunun kesiştiği en küçük hücreyi yakalamaya imkan sagliyor.
+	// ((Sag ust köşe sorgu ile kesişmeyen bir hücreyi temsil ediyor. Bunun bir zararı yok. ))
+	// Yuvarlama yapmasan da findMortonRanges(...) ELSE bölgesinde en küçük hücreleri zaten yakalıyor ve aynı sonuç üretiliyor.
+	// Acab hangisi daha hızlı ?? Yuvarlama yaparsan 0.13 sec. Yapmazsan 0.15 sec. Yani yuvarlamada yaklaşık "10 msec" daha hızlı oluyor.
 	int yuvarlama=(int)(xl/(1/pow(2,WIDTH)));
 	xl=(1/pow(2,WIDTH))*yuvarlama;
 
 	yuvarlama=(int)(yl/(1/pow(2,WIDTH)));
 	yl=(1/pow(2,WIDTH))*yuvarlama;
 
-	yuvarlama=ceil((xh/(1/pow(2,WIDTH))));
+	yuvarlama=ceil((xh/(1/pow(2,WIDTH))));  // sag-ust köşeye cekiyoruz. bu daha doğru.
+//	yuvarlama=(int)(xh/(1/pow(2,WIDTH)));   // sol-alt köşeye cekiyoruz.
 	xh=(1/pow(2,WIDTH))*yuvarlama;
 
 	yuvarlama=ceil((yh/(1/pow(2,WIDTH))));
+//	yuvarlama=(int)(yh/(1/pow(2,WIDTH)));
 	yh=(1/pow(2,WIDTH))*yuvarlama;
 
 	cout << " window query after yuvarlama::"<<endl;
@@ -234,6 +249,13 @@ int main(int argc, char *argv[]) {
 	currmax=0;
 
 	findMortonRanges(query,unit,mc,pos);  // here traverse the quad-tree recursively
+	(void)gettimeofday(&end_time, NULL);
+	secs =
+		(((double)end_time.tv_sec * 1000000 +
+		end_time.tv_usec) -
+		((double)start_time.tv_sec * 1000000 +
+		start_time.tv_usec)) / 1000000;
+	printf("[STAT] Finding morton codes takes %.2f seconds: ", secs);
 
 	// last partititon is being added below.
 	if(resultset.find(currmin) != resultset.end()){
@@ -246,10 +268,10 @@ int main(int argc, char *argv[]) {
 
 	// scan the partitions
 	cout <<"Number of partititions: "<< resultset.size()<<endl;
-	for (auto itr = resultset.begin(); itr != resultset.end();itr++) {
-		cout << '\t' << itr->first
-				<< '\t' << itr->second << '\n';
-	}
+//	for (auto itr = resultset.begin(); itr != resultset.end();itr++) {
+//		cout << '\t' << itr->first
+//				<< '\t' << itr->second << '\n';
+//	}
 	cout << endl;
 
 
@@ -270,8 +292,8 @@ int main(int argc, char *argv[]) {
 			double xx2=(double)x2/pow(2, WIDTH);
 			double yy2=(double)y2/pow(2, WIDTH);
 
-			cout << std::setprecision(10) << xx1 << '\t' << std::setprecision(10)<< yy1 << endl;
-			cout << std::setprecision(10) << xx2 << '\t' <<std::setprecision(10) << yy2 << endl;
+//			cout << std::setprecision(10) << xx1 << '\t' << std::setprecision(10)<< yy1 << endl;
+//			cout << std::setprecision(10) << xx2 << '\t' <<std::setprecision(10) << yy2 << endl;
 
 			// convert 16-bit morton code to 32-bit codes:  2 ways: 1-transform by scaling over morton space 2- transform for each double dimension
 //			uint32_t bit32mc1=( itr->first / pow(2, 2*WIDTH) ) * pow(2, 4* WIDTH);
