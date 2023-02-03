@@ -34,7 +34,7 @@ using namespace libmorton;
 using namespace SpatialIndex;
 
 #define DEBUG 0
-#define TESTING 0
+#define TESTING 1
 
 static int WIDTH=8;  // DEPTH of z-curve = NUMBER OF MAX SPLITS = bits used to represent single dim.  8 seems enough to represent the shape of query.
 // naming is a little confusing. But, the real meaning is we have a double in unit area [0,1]. If we want to represent the space 2^16 = 65535 cells (codes),
@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
 		cout << morton2D_64_encode(1, 0) << endl;  // y:00 x:01  --> 0001
 		cout << morton2D_64_encode(50, 12) << endl; // y:12 x:50  --> 001100  110010  --> 010110100100 = 1444
 
-		double x, y;
-		WIDTH=8; // toplam 256*256 = 65535 kod kullanacagiz.
+		double x, y;  // a point in unit area. Set the resolution :: Koordinat sistemimiz kaça kaçlık grid olacak?
+		WIDTH=8; // Her eksende 8 bit kullanalım. toplam 256*256 = 65535 kod (grid cell) kullanacagiz.
 		cout << "WIDTH is " << WIDTH <<endl;
 		x = 0.5;
 		y = 0.5;
@@ -85,22 +85,47 @@ int main(int argc, char *argv[]) {
 		// Yani uretilen morton kodlari sol alt kose pix'in morton kodu. Cell ne kadar buyuk olursa olsun aynı cunku.!!!
 		// MEsela aynı uzam alanının 2^32 cell ile temsil etmek yerine 2^64 cell ile temsil edebilriiz. Yani resolution daha yüksek.
 
-		WIDTH = 4;// Toplam 256 kod kullanacagiz. Yani bir uzam bolgesi (unit area gibi) 256 kod ile temsil ediyoruz. Resolution dusuk.
+		WIDTH = 1;// Toplam 4 kod kullanacagiz. Yani bir uzam bolgesi (i.e unit area) 4 kod ile temsil ediyoruz. Resolution dusuk.
 		cout << "WIDTH is " << WIDTH <<endl;
-		xs = x * (pow(2, WIDTH) - 1); // scale to [0,16]
-		ys = y * (pow(2, WIDTH) - 1); // scale to [0,16]
+		// round kullanmalısın ki, bir sonraki slice'a bir parça geçerse onu yakalayabilelim.!
+		xs = round ( 0.7 * (pow(2, WIDTH) - 1)); // scale to [0,1]
+		ys = round ( 0.5 * (pow(2, WIDTH) - 1)); // scale to [0,1]
+		cout << "		xs:" << xs << ", ys:" << ys << endl;
+		morcod = morton2D_32_encode(xs, ys);
+		cout << "		morcod of a point in unit area:"<< morcod<< endl;
+		morcod = morton2D_64_encode(xs, ys);  // Gene aynı.
+		cout << "		morcod of a point in unit area:"<< morcod<< endl;
 
-		morcod = morton2D_32_encode(xs, ys);  // 256 /4 = 64. cell. code 63
-		cout << "		morcod of center:"<< morcod<< endl;
-		morcod = morton2D_64_encode(xs, ys);  // Gene aynı. 256 /4 = 64. cell. code 63
-		cout << "		morcod of center:"<< morcod<< endl;
+		WIDTH = 2;// Toplam 16 kod kullanacagiz. Yani bir uzam bolgesi (i.e unit area) 16 kod ile temsil ediyoruz. Resolution biraz daha iyi
+		cout << "WIDTH is " << WIDTH << endl;
+		// round kullanmalısın ki, bir sonraki slice'a bir parça geçerse onu yakalayabilelim.!
+		xs = round(0.7 * (pow(2, WIDTH) - 1)); // scale to [0,3]
+		ys = round(0.5 * (pow(2, WIDTH) - 1)); // scale to [0,3]
+		cout << "		xs:" << xs << ", ys:" << ys << endl;
+		morcod = morton2D_32_encode(xs, ys);
+		cout << "		morcod of a point in unit area:" << morcod << endl;
+		morcod = morton2D_64_encode(xs, ys);  // Gene aynı.
+		cout << "		morcod of a point in unit area:" << morcod << endl;
+
+		WIDTH = 3;// Toplam 64 kod kullanacagiz. Yani bir uzam bolgesi (i.e unit area) 4 kod ile temsil ediyoruz. Resolution dusuk.
+		cout << "WIDTH is " << WIDTH << endl;
+		// IMPORTANT !!!!: round kullanmalısın ki, bir sonraki slice'a bir parça geçerse onu yakalayabilelim.!
+		xs = round(0.7 * (pow(2, WIDTH) - 1)); // scale to [0,7]
+		ys = round(0.5 * (pow(2, WIDTH) - 1)); // scale to [0,7]
+		cout << "		xs:" << xs << ", ys:" << ys << endl;
+		morcod = morton2D_32_encode(xs, ys);
+		cout << "		morcod of a point in unit area:" << morcod << endl;
+		morcod = morton2D_64_encode(xs, ys);  // Gene aynı.
+		cout << "		morcod of a point in unit area:" << morcod << endl;
+
+		// now test decoding from the last morcode = 49
+		uint_fast16_t xs1,ys1;
+		morton2D_32_decode(morcod,xs1,ys1);
+		cout << "decoding:" << xs1 << '\t' << ys1 << endl;  // last morcod=49 ==> xs1, ys1 = 5, 4
+		cout << "Cell left-bottom corner:" << (double)  xs1/pow(2, WIDTH) << '\t' <<(double) ys1/pow(2, WIDTH) << endl;  // transform it into unit area. 7/16. (7. slice coord. value)
+		cout << "Cell center:" << (double)  xs1/pow(2, WIDTH) + 1/(2*pow(2, WIDTH)) << '\t' <<(double) ys1/pow(2, WIDTH) + 1/(2*pow(2, WIDTH))<< endl;  // transform it into unit area. 7/16. (7. slice coord. value)
 
 
-
-		uint_fast16_t x1,y1;
-		morton2D_32_decode(morcod,x1,y1);
-		cout << "decoding:" << x1 << '\t' << y1 << endl;  // last morcod=63 ==> x,y = 7,7
-		cout << "decoding:" << (double)  x1/pow(2, WIDTH) << '\t' <<(double) y1/pow(2, WIDTH) << endl;  // transform it into unit area. 7/16. (7. slice coord. value)
 
 		cout << "Generate random numbers::" <<endl;
 		x = rnd.nextUniformDouble();
