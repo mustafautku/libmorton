@@ -21,7 +21,7 @@
  *      Author: mustafautku
  */
 // Utility headers
-#include "morton.h"
+#include <morton.h>
 #include "math.h"
 #include <iostream>
 #include <spatialindex/SpatialIndex.h>
