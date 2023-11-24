@@ -1,4 +1,9 @@
+C/C++ Build -->	Settings -->  GCC C++ Compiler  --> Includes
+	Burada lib orton .h dosyaların olması gerek. Onlar PROGRAMMING/ 'de
 
+C/C++ Build -->	Settings -->  GCC Linker --> Libraries
+	Burada spatialindex olmalı.
+	
 
  main.cpp includes findMortonRanges function that is used in window query execution.
  This code is also used (copied) to  Berkeley-DB-tutorials/bdb-4-part-b-tree-with-bulks Partitioned-B-tree.cpp.
