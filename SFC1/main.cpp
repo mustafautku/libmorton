@@ -70,17 +70,23 @@ int main(int argc, char *argv[]) {
 		cout << "WIDTH is " << WIDTH <<endl;
 		x = 0.5;
 		y = 0.5;
+		// slice-no lari:
 		int xs = x * (pow(2, WIDTH) - 1); // scale to [0,255]
 		int ys = y * (pow(2, WIDTH) - 1); // scale to [0,255]
+		uint32_t morcod = morton2D_32_encode(xs, ys); // 65536 / 4 = 16384.  code is 16383
+		cout << "		morcod of center--hatali:" << morcod << endl;
+		// Oysa, 0.5 , 0.5 yani center morton kodu 4. ceyrek sol-alt kosesi olmalı. Yani 16384*3 = 49152 olmalı.
+		// Demek ki slice-no xs,ys yanlis oldu.
+		xs = round(x * (pow(2, WIDTH) - 1)); // scale to [0,255]
+		ys = round(y * (pow(2, WIDTH) - 1)); // scale to [0,255]
+		morcod = morton2D_32_encode(xs, ys);
+		cout << "		morcod of center--dogru:" << morcod << endl;
 
 		cout << "		max morcod:"<< morton2D_32_encode(255, 255)<< endl;  // 65535
 		cout << "		max morcod:"<< morton2D_64_encode(255, 255)<< endl;  // 65535. evet aynı deger. 65535 tane kod kullanmak istedik. Her iki calsma uzayı da bize bunu verdi.
 
-		uint32_t morcod = morton2D_32_encode(xs, ys); // 65536 / 4 = 16384.  code is 16383
-		cout << "		morcod of center:"<< morcod<< endl;
-
-		cout << "		morcod:"<< morton2D_32_encode(256, 256)<< endl;  // 65535*3 =196608
-		cout << "		morcod:"<< morton2D_64_encode(256, 256)<< endl;  // 65535*3 =196608. evet aynı deger. 65535 tane kod kullanmak istedik. Her iki calsma uzayı da bize bunu verdi.
+		cout << "		morcod of slice-no:(256,256):"<< morton2D_32_encode(256, 256)<< endl;  // 65535*3 =196608
+		cout << "		morcod of slice-no:(256,256):"<< morton2D_64_encode(256, 256)<< endl;  // 65535*3 =196608. evet aynı deger. 65535 tane kod kullanmak istedik. Her iki calsma uzayı da bize bunu verdi.
 
 		// Yani uretilen morton kodlari sol alt kose pix'in morton kodu. Cell ne kadar buyuk olursa olsun aynı cunku.!!!
 		// MEsela aynı uzam alanının 2^32 cell ile temsil etmek yerine 2^64 cell ile temsil edebilriiz. Yani resolution daha yüksek.
@@ -92,9 +98,9 @@ int main(int argc, char *argv[]) {
 		ys = round ( 0.5 * (pow(2, WIDTH) - 1)); // scale to [0,1]
 		cout << "		xs:" << xs << ", ys:" << ys << endl;
 		morcod = morton2D_32_encode(xs, ys);
-		cout << "		morcod of a point in unit area:"<< morcod<< endl;
+		cout << "		morcod of a point (0.7,0.5) in unit area:"<< morcod<< endl;
 		morcod = morton2D_64_encode(xs, ys);  // Gene aynı.
-		cout << "		morcod of a point in unit area:"<< morcod<< endl;
+		cout << "		morcod of a point (0.7,0.5) in unit area:"<< morcod<< endl;
 
 		WIDTH = 2;// Toplam 16 kod kullanacagiz. Yani bir uzam bolgesi (i.e unit area) 16 kod ile temsil ediyoruz. Resolution biraz daha iyi
 		cout << "WIDTH is " << WIDTH << endl;
@@ -103,9 +109,9 @@ int main(int argc, char *argv[]) {
 		ys = round(0.5 * (pow(2, WIDTH) - 1)); // scale to [0,3]
 		cout << "		xs:" << xs << ", ys:" << ys << endl;
 		morcod = morton2D_32_encode(xs, ys);
-		cout << "		morcod of a point in unit area:" << morcod << endl;
+		cout << "		morcod of a point(0.7,0.5)  in unit area:" << morcod << endl;
 		morcod = morton2D_64_encode(xs, ys);  // Gene aynı.
-		cout << "		morcod of a point in unit area:" << morcod << endl;
+		cout << "		morcod of a point(0.7,0.5)  in unit area:" << morcod << endl;
 
 		WIDTH = 3;// Toplam 64 kod kullanacagiz. Yani bir uzam bolgesi (i.e unit area) 4 kod ile temsil ediyoruz. Resolution dusuk.
 		cout << "WIDTH is " << WIDTH << endl;
@@ -114,9 +120,9 @@ int main(int argc, char *argv[]) {
 		ys = round(0.5 * (pow(2, WIDTH) - 1)); // scale to [0,7]
 		cout << "		xs:" << xs << ", ys:" << ys << endl;
 		morcod = morton2D_32_encode(xs, ys);
-		cout << "		morcod of a point in unit area:" << morcod << endl;
+		cout << "		morcod of a point(0.7,0.5)  in unit area:" << morcod << endl;
 		morcod = morton2D_64_encode(xs, ys);  // Gene aynı.
-		cout << "		morcod of a point in unit area:" << morcod << endl;
+		cout << "		morcod of a point(0.7,0.5)  in unit area:" << morcod << endl;
 
 		// now test decoding from the last morcode = 49
 		uint_fast16_t xs1,ys1;
@@ -124,6 +130,21 @@ int main(int argc, char *argv[]) {
 		cout << "decoding:" << xs1 << '\t' << ys1 << endl;  // last morcod=49 ==> xs1, ys1 = 5, 4
 		cout << "Cell left-bottom corner:" << (double)  xs1/pow(2, WIDTH) << '\t' <<(double) ys1/pow(2, WIDTH) << endl;  // transform it into unit area. 7/16. (7. slice coord. value)
 		cout << "Cell center:" << (double)  xs1/pow(2, WIDTH) + 1/(2*pow(2, WIDTH)) << '\t' <<(double) ys1/pow(2, WIDTH) + 1/(2*pow(2, WIDTH))<< endl;  // transform it into unit area. 7/16. (7. slice coord. value)
+
+		morton2D_64_decode(morcod,xs1,ys1);
+		cout << "decoding:" << xs1 << '\t' << ys1 << endl;  // last morcod=49 ==> xs1, ys1 = 5, 4
+		cout << "Cell left-bottom corner:" << (double)  xs1/pow(2, WIDTH) << '\t' <<(double) ys1/pow(2, WIDTH) << endl;  // transform it into unit area. 7/16. (7. slice coord. value)
+		cout << "Cell center:" << (double)  xs1/pow(2, WIDTH) + 1/(2*pow(2, WIDTH)) << '\t' <<(double) ys1/pow(2, WIDTH) + 1/(2*pow(2, WIDTH))<< endl;  // transform it into unit area. 7/16. (7. slice coord. value)
+
+//		2^16= 65535   2^32= 4294967295
+		morcod = morton2D_32_encode(65535, 65535);
+		cout << "		morcod of rigth-upper corner  in unit area:" << morcod << endl;
+		uint_fast32_t xs2=4294967295;
+		uint_fast32_t ys2=4294967295;
+		morcod = morton2D_64_encode(xs2, ys2);  // Gene aynı.
+		cout << "		morcod of rigth-upper corner  in unit area:" << morcod << endl;
+		// Demek ki max uretilebilen morton 2^32.
+		//  morton2D_32_encode,  morton2D_64_encode  aynı kodu uretiyor. Fakat gercekleme performansi farklı..
 
 
 
